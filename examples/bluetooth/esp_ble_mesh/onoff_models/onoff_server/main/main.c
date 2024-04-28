@@ -228,8 +228,6 @@ static void example_ble_mesh_generic_server_cb(esp_ble_mesh_generic_server_cb_ev
         ESP_LOGI(TAG, "ESP_BLE_MESH_GENERIC_SERVER_STATE_CHANGE_EVT");
         if (param->ctx.recv_op == ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_SET ||
             param->ctx.recv_op == ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_SET_UNACK) {
-                            ESP_LOGI(TAG, "test1");
-
             ESP_LOGI(TAG, "onoff 0x%02x", param->value.state_change.onoff_set.onoff);
             example_change_led_state(param->model, &param->ctx, param->value.state_change.onoff_set.onoff);
         }
@@ -246,7 +244,6 @@ static void example_ble_mesh_generic_server_cb(esp_ble_mesh_generic_server_cb_ev
         ESP_LOGI(TAG, "ESP_BLE_MESH_GENERIC_SERVER_RECV_SET_MSG_EVT");
         if (param->ctx.recv_op == ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_SET ||
             param->ctx.recv_op == ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_SET_UNACK) {
-                                            ESP_LOGI(TAG, "test2");
             ESP_LOGI(TAG, "onoff 0x%02x, tid 0x%02x", param->value.set.onoff.onoff, param->value.set.onoff.tid);
             if (param->value.set.onoff.op_en) {
                 ESP_LOGI(TAG, "trans_time 0x%02x, delay 0x%02x",
