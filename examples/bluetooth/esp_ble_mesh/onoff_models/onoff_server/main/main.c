@@ -10,6 +10,7 @@
 #include <stdio.h>
 #include <string.h>
 #include <inttypes.h>
+#include "esp_random.h"
 
 #include "esp_log.h"
 #include "nvs_flash.h"
@@ -165,6 +166,8 @@ static void example_handle_gen_onoff_msg(esp_ble_mesh_model_t *model,
             srv->state.onoff = set->onoff;
         } else {
             /* TODO: Delay and state transition */
+            int random_delay_ms = esp_random() % 30001;  // Generate random number from 0 to 30000
+            vTaskDelay(pdMS_TO_TICKS(random_delay_ms));
             srv->state.onoff = set->onoff;
         }
         if (ctx->recv_op == ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_SET) {
@@ -267,6 +270,13 @@ static void example_ble_mesh_config_server_cb(esp_ble_mesh_cfg_server_cb_event_t
                 param->value.state_change.appkey_add.net_idx,
                 param->value.state_change.appkey_add.app_idx);
             ESP_LOG_BUFFER_HEX("AppKey", param->value.state_change.appkey_add.app_key, 16);
+            for(int i=0;i<composition.element_count;i++)
+            {
+                ESP_LOGI(TAG, "elem_addr 0x%04x, app_idx 0x%04x, cid 0x%04x, mod_id 0x%04x",composition.elements[i].element_addr,param->value.state_change.appkey_add.app_idx,0xffff,0x1000);
+            esp_ble_mesh_node_bind_app_key_to_local_model(composition.elements[i].element_addr,0xffff,0x1000,param->value.state_change.appkey_add.app_idx);
+            esp_ble_mesh_model_subscribe_group_addr(composition.elements[i].element_addr,0xffff,0x1000,0xC000);
+
+            }
             break;
         case ESP_BLE_MESH_MODEL_OP_MODEL_APP_BIND:
             ESP_LOGI(TAG, "ESP_BLE_MESH_MODEL_OP_MODEL_APP_BIND");

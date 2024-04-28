@@ -17,7 +17,7 @@
 
 #define TAG "BOARD"
 
-#define BUTTON_IO_NUM           0
+#define BUTTON_IO_NUM           12
 #define BUTTON_ACTIVE_LEVEL     0
 
 extern void example_ble_mesh_send_gen_onoff_set(void);
