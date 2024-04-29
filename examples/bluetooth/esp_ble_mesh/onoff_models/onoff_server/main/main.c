@@ -115,7 +115,17 @@ static esp_ble_mesh_prov_t provision = {
     .output_actions = 0,
 #endif
 };
-
+static void change_relay_mode(uint8_t state)
+{
+    if(state == 1)
+    {
+        config_server.relay = ESP_BLE_MESH_RELAY_ENABLED;
+    }
+    else
+    {
+        config_server.relay = ESP_BLE_MESH_RELAY_DISABLED;
+    }
+}
 static void prov_complete(uint16_t net_idx, uint16_t addr, uint8_t flags, uint32_t iv_index)
 {
     ESP_LOGI(TAG, "net_idx: 0x%04x, addr: 0x%04x", net_idx, addr);
@@ -139,7 +149,11 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
             }
         }
     } else if (ESP_BLE_MESH_ADDR_IS_GROUP(ctx->recv_dst)) {
-        if (esp_ble_mesh_is_model_subscribed_to_group(model, ctx->recv_dst)) {
+        if(esp_ble_mesh_is_model_subscribed_to_group(model, ctx->recv_dst) && ctx->recv_dst == 0xC001)
+        {
+            change_relay_mode(onoff); 
+        }
+        else if (esp_ble_mesh_is_model_subscribed_to_group(model, ctx->recv_dst)) {
             led = &led_state[model->element->element_addr - primary_addr];
             board_led_operation(led->pin, onoff);
         }
@@ -272,10 +286,12 @@ static void example_ble_mesh_config_server_cb(esp_ble_mesh_cfg_server_cb_event_t
             for(int i=0;i<composition.element_count;i++)
             {
                 ESP_LOGI(TAG, "elem_addr 0x%04x, app_idx 0x%04x, cid 0x%04x, mod_id 0x%04x",composition.elements[i].element_addr,param->value.state_change.appkey_add.app_idx,0xffff,0x1000);
-            esp_ble_mesh_node_bind_app_key_to_local_model(composition.elements[i].element_addr,0xffff,0x1000,param->value.state_change.appkey_add.app_idx);
-            esp_ble_mesh_model_subscribe_group_addr(composition.elements[i].element_addr,0xffff,0x1000,0xC000);
-
+                esp_ble_mesh_node_bind_app_key_to_local_model(composition.elements[i].element_addr,0xffff,0x1000,param->value.state_change.appkey_add.app_idx);
+                //Remove this line for relay davices
+                esp_ble_mesh_model_subscribe_group_addr(composition.elements[i].element_addr,0xffff,0x1000,0xC000);
             }
+            //Remove this line for onoff server models
+                        esp_ble_mesh_model_subscribe_group_addr(composition.elements[0].element_addr,0xffff,0x1000,0xC001);
             break;
         case ESP_BLE_MESH_MODEL_OP_MODEL_APP_BIND:
             ESP_LOGI(TAG, "ESP_BLE_MESH_MODEL_OP_MODEL_APP_BIND");
