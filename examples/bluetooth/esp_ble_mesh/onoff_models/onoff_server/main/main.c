@@ -161,13 +161,39 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
             }
         }
     } else if (ESP_BLE_MESH_ADDR_IS_GROUP(ctx->recv_dst)) {
-        if(esp_ble_mesh_is_model_subscribed_to_group(model, ctx->recv_dst) && ctx->recv_dst == 0xC001)
+        if(esp_ble_mesh_is_model_subscribed_to_group(model, ctx->recv_dst))
+        {
+            if (ctx->recv_dst == 0xC001)
         {
             change_relay_mode(onoff); 
         }
-        else if (esp_ble_mesh_is_model_subscribed_to_group(model, ctx->recv_dst)) {
+        else {
             led = &led_state[model->element->element_addr - primary_addr];
             board_led_operation(led->pin, onoff);
+        }
+        int random_delay_ms = esp_random() % 30001;
+        TimerArgs *timer_args = (TimerArgs *)malloc(sizeof(TimerArgs));
+        if (timer_args != NULL) {
+            timer_args->model = model;
+            timer_args->srv = (esp_ble_mesh_gen_onoff_srv_t *)model->user_data;
+            timer_args->ctx=ctx;
+            if(ctx->recv_dst == 0xC000)
+            {
+                timer_args->type=1;
+            }
+            else if(ctx->recv_dst == 0xC001)
+            {
+                timer_args->type=2;
+            }
+        if (random_delay_timer != NULL) {
+            xTimerStop(random_delay_timer, portMAX_DELAY);
+        }
+
+            random_delay_timer = xTimerCreate("RandomDelayTimer", pdMS_TO_TICKS(random_delay_ms), pdFALSE, (void *)timer_args, status_confirmation_callback);
+        if (random_delay_timer != NULL) {
+            xTimerStart(random_delay_timer, portMAX_DELAY);
+        }
+                }
         }
     } else if (ctx->recv_dst == 0xFFFF) {
         led = &led_state[model->element->element_addr - primary_addr];
@@ -198,29 +224,6 @@ static void example_handle_gen_onoff_msg(esp_ble_mesh_model_t *model,
                 ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
         }
         example_change_led_state(model, ctx, srv->state.onoff);
-        int random_delay_ms = esp_random() % 30001;
-        TimerArgs *timer_args = (TimerArgs *)malloc(sizeof(TimerArgs));
-        if (timer_args != NULL) {
-            timer_args->model = model;
-            timer_args->srv = srv;
-            timer_args->ctx=ctx;
-            if(ctx->recv_dst == 0xC000)
-            {
-                timer_args->type=1;
-            }
-            else if(ctx->recv_dst == 0xC001)
-            {
-                timer_args->type=2;
-            }
-        if (random_delay_timer != NULL) {
-            xTimerStop(random_delay_timer, portMAX_DELAY);
-        }
-
-            random_delay_timer = xTimerCreate("RandomDelayTimer", pdMS_TO_TICKS(random_delay_ms), pdFALSE, (void *)timer_args, status_confirmation_callback);
-        if (random_delay_timer != NULL) {
-            xTimerStart(random_delay_timer, portMAX_DELAY);
-        }
-                }
         break;
     default:
         break;

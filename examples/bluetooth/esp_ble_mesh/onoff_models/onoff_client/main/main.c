@@ -13,6 +13,8 @@
 
 #include "esp_log.h"
 #include "nvs_flash.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/timers.h"
 
 #include "esp_ble_mesh_common_api.h"
 #include "esp_ble_mesh_provisioning_api.h"
@@ -42,6 +44,12 @@ static struct example_info_store {
     .onoff = LED_OFF,
     .tid = 0x0,
 };
+float m=1;//Number of lights
+float n=1;//Number of relays
+float sent=0;
+float recv=0;
+float pdr;
+static TimerHandle_t delay_timer;
 
 static nvs_handle_t NVS_HANDLE;
 static const char * NVS_KEY = "onoff_client";
@@ -169,9 +177,16 @@ static void example_ble_mesh_provisioning_cb(esp_ble_mesh_prov_cb_event_t event,
         break;
     }
 }
-
+void pdr_callback()
+{
+    pdr=(recv/sent)*100;
+    ESP_LOGI(TAG, "Current PDR is : %f percent",pdr);
+    recv=0;
+}
 void example_ble_mesh_send_gen_onoff_set(void)
 {
+    sent=m;
+    recv=0;
     esp_ble_mesh_generic_client_set_state_t set = {0};
     esp_ble_mesh_client_common_param_t common = {0};
     esp_err_t err = ESP_OK;
@@ -198,10 +213,20 @@ void example_ble_mesh_send_gen_onoff_set(void)
     }
 
     store.onoff = !store.onoff;
+     if (delay_timer != NULL) {
+            xTimerStop(delay_timer, portMAX_DELAY);
+        }
+
+            delay_timer = xTimerCreate("RandomDelayTimer", pdMS_TO_TICKS(30001), pdFALSE, NULL, pdr_callback);
+        if (delay_timer != NULL) {
+            xTimerStart(delay_timer, portMAX_DELAY);
+        }
     mesh_example_info_store(); /* Store proper mesh example info */
 }
 void example_ble_mesh_send_gen_onoff_set1(void)
 {
+    sent=n;
+    recv=0;
     esp_ble_mesh_generic_client_set_state_t set = {0};
     esp_ble_mesh_client_common_param_t common = {0};
     esp_err_t err = ESP_OK;
@@ -227,6 +252,14 @@ void example_ble_mesh_send_gen_onoff_set1(void)
         return;
     }
     store.onoff = !store.onoff;
+     if (delay_timer != NULL) {
+            xTimerStop(delay_timer, portMAX_DELAY);
+        }
+
+            delay_timer = xTimerCreate("RandomDelayTimer", pdMS_TO_TICKS(30001), pdFALSE, NULL, pdr_callback);
+        if (delay_timer != NULL) {
+            xTimerStart(delay_timer, portMAX_DELAY);
+        }
     mesh_example_info_store(); /* Store proper mesh example info */
 }
 static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_event_t event,
@@ -251,6 +284,7 @@ static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_ev
     case ESP_BLE_MESH_GENERIC_CLIENT_PUBLISH_EVT:
         ESP_LOGI(TAG, "ESP_BLE_MESH_GENERIC_CLIENT_PUBLISH_EVT");
         if (param->params->opcode == ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS) {
+            recv=recv+1;
             if (param->status_cb.onoff_status.present_onoff == 10 || param->status_cb.onoff_status.present_onoff == 11)
             {
                             ESP_LOGI(TAG, "Received status confirmation from light, status: %d", param->status_cb.onoff_status.present_onoff-10);
