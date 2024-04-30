@@ -14,6 +14,8 @@
 
 #include "esp_log.h"
 #include "nvs_flash.h"
+#include "freertos/FreeRTOS.h"
+#include "freertos/timers.h"
 
 #include "esp_ble_mesh_defs.h"
 #include "esp_ble_mesh_common_api.h"
@@ -33,6 +35,14 @@
 extern struct _led_state led_state[3];
 
 static uint8_t dev_uuid[16] = { 0xdd, 0xdd };
+static TimerHandle_t random_delay_timer;
+typedef struct {
+    esp_ble_mesh_model_t *model;
+    esp_ble_mesh_gen_onoff_srv_t *srv;
+    esp_ble_mesh_msg_ctx_t *ctx;
+    int type;
+} TimerArgs;
+static void status_confirmation_callback(TimerHandle_t xTimer);
 
 static esp_ble_mesh_cfg_srv_t config_server = {
     /* 3 transmissions with 20ms interval */
@@ -120,10 +130,12 @@ static void change_relay_mode(uint8_t state)
     if(state == 1)
     {
         config_server.relay = ESP_BLE_MESH_RELAY_ENABLED;
+        ESP_LOGI(TAG,"Relay Enabled");
     }
     else
     {
         config_server.relay = ESP_BLE_MESH_RELAY_DISABLED;
+                ESP_LOGI(TAG,"Relay Disabled");
     }
 }
 static void prov_complete(uint16_t net_idx, uint16_t addr, uint8_t flags, uint32_t iv_index)
@@ -187,13 +199,56 @@ static void example_handle_gen_onoff_msg(esp_ble_mesh_model_t *model,
         }
         example_change_led_state(model, ctx, srv->state.onoff);
         int random_delay_ms = esp_random() % 30001;
-        vTaskDelay(pdMS_TO_TICKS(random_delay_ms));
-        esp_ble_mesh_model_publish(model, ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS,
-            sizeof(srv->state.onoff), &srv->state.onoff, ROLE_NODE);
+        TimerArgs *timer_args = (TimerArgs *)malloc(sizeof(TimerArgs));
+        if (timer_args != NULL) {
+            timer_args->model = model;
+            timer_args->srv = srv;
+            timer_args->ctx=ctx;
+            if(ctx->recv_dst == 0xC000)
+            {
+                timer_args->type=1;
+            }
+            else if(ctx->recv_dst == 0xC001)
+            {
+                timer_args->type=2;
+            }
+        if (random_delay_timer != NULL) {
+            xTimerStop(random_delay_timer, portMAX_DELAY);
+        }
+
+            random_delay_timer = xTimerCreate("RandomDelayTimer", pdMS_TO_TICKS(random_delay_ms), pdFALSE, (void *)timer_args, status_confirmation_callback);
+        if (random_delay_timer != NULL) {
+            xTimerStart(random_delay_timer, portMAX_DELAY);
+        }
+                }
         break;
     default:
         break;
     }
+} 
+static void status_confirmation_callback(TimerHandle_t xTimer)
+{
+    TimerArgs *timer_args = (TimerArgs *)pvTimerGetTimerID(xTimer);
+    ESP_LOGI(TAG,"Call back for publish");
+    esp_ble_mesh_model_t *model = timer_args->model;
+    esp_ble_mesh_gen_onoff_srv_t *srv = timer_args->srv;
+        esp_ble_mesh_msg_ctx_t *ctx = timer_args->ctx;
+        int type = timer_args->type;
+    esp_ble_mesh_model_publish(model, ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS,
+            sizeof(srv->state.onoff), &srv->state.onoff, ROLE_NODE);
+    if(type == 1)
+    {
+        srv->state.onoff=srv->state.onoff+10;
+        esp_ble_mesh_server_model_send_msg(model, ctx,
+                ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
+    }
+    else if(type == 2)
+{  srv->state.onoff=srv->state.onoff+20;
+    esp_ble_mesh_server_model_send_msg(model, ctx,
+                ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
+}
+    free(timer_args);
+    
 }
 
 static void example_ble_mesh_provisioning_cb(esp_ble_mesh_prov_cb_event_t event,
@@ -289,9 +344,10 @@ static void example_ble_mesh_config_server_cb(esp_ble_mesh_cfg_server_cb_event_t
                 esp_ble_mesh_node_bind_app_key_to_local_model(composition.elements[i].element_addr,0xffff,0x1000,param->value.state_change.appkey_add.app_idx);
                 //Remove this line for relay davices
                 esp_ble_mesh_model_subscribe_group_addr(composition.elements[i].element_addr,0xffff,0x1000,0xC000);
+                //Remove this line for onoff server models
+                esp_ble_mesh_model_subscribe_group_addr(composition.elements[i].element_addr,0xffff,0x1000,0xC001);
+
             }
-            //Remove this line for onoff server models
-                        esp_ble_mesh_model_subscribe_group_addr(composition.elements[0].element_addr,0xffff,0x1000,0xC001);
             break;
         case ESP_BLE_MESH_MODEL_OP_MODEL_APP_BIND:
             ESP_LOGI(TAG, "ESP_BLE_MESH_MODEL_OP_MODEL_APP_BIND");

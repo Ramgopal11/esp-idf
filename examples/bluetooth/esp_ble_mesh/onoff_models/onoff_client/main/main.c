@@ -180,7 +180,7 @@ void example_ble_mesh_send_gen_onoff_set(void)
     common.model = onoff_client.model;
     common.ctx.net_idx = store.net_idx;
     common.ctx.app_idx = store.app_idx;
-    common.ctx.addr = 0xC000;   /* to all nodes */
+    common.ctx.addr = 0xC000;   /* to all light nodes */
     common.ctx.send_ttl = 3;
     common.msg_timeout = 0;     /* 0 indicates that timeout value from menuconfig will be used */
 #if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 2, 0)
@@ -200,7 +200,35 @@ void example_ble_mesh_send_gen_onoff_set(void)
     store.onoff = !store.onoff;
     mesh_example_info_store(); /* Store proper mesh example info */
 }
+void example_ble_mesh_send_gen_onoff_set1(void)
+{
+    esp_ble_mesh_generic_client_set_state_t set = {0};
+    esp_ble_mesh_client_common_param_t common = {0};
+    esp_err_t err = ESP_OK;
 
+    common.opcode = ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_SET_UNACK;
+    common.model = onoff_client.model;
+    common.ctx.net_idx = store.net_idx;
+    common.ctx.app_idx = store.app_idx;
+    common.ctx.addr = 0xC001;   /* to all relay nodes */
+    common.ctx.send_ttl = 3;
+    common.msg_timeout = 0;     /* 0 indicates that timeout value from menuconfig will be used */
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 2, 0)
+    common.msg_role = ROLE_NODE;
+#endif
+
+    set.onoff_set.op_en = false;
+    set.onoff_set.onoff = store.onoff;
+    set.onoff_set.tid = store.tid++;
+
+    err = esp_ble_mesh_generic_client_set_state(&common, &set);
+    if (err) {
+        ESP_LOGE(TAG, "Send Generic OnOff Set Unack failed");
+        return;
+    }
+    store.onoff = !store.onoff;
+    mesh_example_info_store(); /* Store proper mesh example info */
+}
 static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_event_t event,
                                                esp_ble_mesh_generic_client_cb_param_t *param)
 {
@@ -222,6 +250,17 @@ static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_ev
         break;
     case ESP_BLE_MESH_GENERIC_CLIENT_PUBLISH_EVT:
         ESP_LOGI(TAG, "ESP_BLE_MESH_GENERIC_CLIENT_PUBLISH_EVT");
+        if (param->params->opcode == ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS) {
+            if (param->status_cb.onoff_status.present_onoff == 10 || param->status_cb.onoff_status.present_onoff == 11)
+            {
+                            ESP_LOGI(TAG, "Received status confirmation from light, status: %d", param->status_cb.onoff_status.present_onoff-10);
+
+            }
+            else if (param->status_cb.onoff_status.present_onoff == 20 || param->status_cb.onoff_status.present_onoff == 21)
+            {
+            ESP_LOGI(TAG, "Received status confirmation from relay, status: %d", param->status_cb.onoff_status.present_onoff-20);
+            }
+        }
         break;
     case ESP_BLE_MESH_GENERIC_CLIENT_TIMEOUT_EVT:
         ESP_LOGI(TAG, "ESP_BLE_MESH_GENERIC_CLIENT_TIMEOUT_EVT");
