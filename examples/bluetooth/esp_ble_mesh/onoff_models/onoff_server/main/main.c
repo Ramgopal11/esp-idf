@@ -163,14 +163,21 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
     } else if (ESP_BLE_MESH_ADDR_IS_GROUP(ctx->recv_dst)) {
         if(esp_ble_mesh_is_model_subscribed_to_group(model, ctx->recv_dst))
         {
+            int flag = 0;
             if (ctx->recv_dst == 0xC001)
         {
-            change_relay_mode(onoff); 
+            //change_relay_mode(onoff); 
+            //flag=1;
         }
         else {
             led = &led_state[model->element->element_addr - primary_addr];
             board_led_operation(led->pin, onoff);
+            flag=1;
+            //if(config_server.relay == 0x01)
+            //ESP_LOGI(TAG, "Relay is enabled, relaying the message");
         }
+        if(flag ==1)
+        {
         int random_delay_ms = esp_random() % 30001;
         TimerArgs *timer_args = (TimerArgs *)malloc(sizeof(TimerArgs));
         if (timer_args != NULL) {
@@ -192,6 +199,7 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
             random_delay_timer = xTimerCreate("RandomDelayTimer", pdMS_TO_TICKS(random_delay_ms), pdFALSE, (void *)timer_args, status_confirmation_callback);
         if (random_delay_timer != NULL) {
             xTimerStart(random_delay_timer, portMAX_DELAY);
+        }
         }
                 }
         }
@@ -345,9 +353,7 @@ static void example_ble_mesh_config_server_cb(esp_ble_mesh_cfg_server_cb_event_t
             {
                 ESP_LOGI(TAG, "elem_addr 0x%04x, app_idx 0x%04x, cid 0x%04x, mod_id 0x%04x",composition.elements[i].element_addr,param->value.state_change.appkey_add.app_idx,0xffff,0x1000);
                 esp_ble_mesh_node_bind_app_key_to_local_model(composition.elements[i].element_addr,0xffff,0x1000,param->value.state_change.appkey_add.app_idx);
-                //Remove this line for relay davices
                 esp_ble_mesh_model_subscribe_group_addr(composition.elements[i].element_addr,0xffff,0x1000,0xC000);
-                //Remove this line for onoff server models
                 esp_ble_mesh_model_subscribe_group_addr(composition.elements[i].element_addr,0xffff,0x1000,0xC001);
 
             }

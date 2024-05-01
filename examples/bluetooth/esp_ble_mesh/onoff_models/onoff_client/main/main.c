@@ -37,11 +37,13 @@ static struct example_info_store {
     uint16_t net_idx;   /* NetKey Index */
     uint16_t app_idx;   /* AppKey Index */
     uint8_t  onoff;     /* Remote OnOff */
+    uint8_t  onoff1;     /* Remote OnOff */
     uint8_t  tid;       /* Message TID */
 } __attribute__((packed)) store = {
     .net_idx = ESP_BLE_MESH_KEY_UNUSED,
     .app_idx = ESP_BLE_MESH_KEY_UNUSED,
     .onoff = LED_OFF,
+    .onoff1 = LED_OFF,
     .tid = 0x0,
 };
 float m=1;//Number of lights
@@ -243,7 +245,7 @@ void example_ble_mesh_send_gen_onoff_set1(void)
 #endif
 
     set.onoff_set.op_en = false;
-    set.onoff_set.onoff = store.onoff;
+    set.onoff_set.onoff = store.onoff1;
     set.onoff_set.tid = store.tid++;
 
     err = esp_ble_mesh_generic_client_set_state(&common, &set);
@@ -251,7 +253,7 @@ void example_ble_mesh_send_gen_onoff_set1(void)
         ESP_LOGE(TAG, "Send Generic OnOff Set Unack failed");
         return;
     }
-    store.onoff = !store.onoff;
+    store.onoff1 = !store.onoff1;
      if (delay_timer != NULL) {
             xTimerStop(delay_timer, portMAX_DELAY);
         }
