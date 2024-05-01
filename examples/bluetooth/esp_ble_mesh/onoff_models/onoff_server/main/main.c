@@ -130,12 +130,12 @@ static void change_relay_mode(uint8_t state)
     if(state == 1)
     {
         config_server.relay = ESP_BLE_MESH_RELAY_ENABLED;
-        ESP_LOGI(TAG,"Relay Enabled");
+        ESP_LOGI(TAG,"RELAY ENABLED");
     }
     else
     {
         config_server.relay = ESP_BLE_MESH_RELAY_DISABLED;
-                ESP_LOGI(TAG,"Relay Disabled");
+                ESP_LOGI(TAG,"RELAY DISABLED");
     }
 }
 static void prov_complete(uint16_t net_idx, uint16_t addr, uint8_t flags, uint32_t iv_index)
@@ -174,7 +174,7 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
             board_led_operation(led->pin, onoff);
             flag=1;
             //if(config_server.relay == 0x01)
-            //ESP_LOGI(TAG, "Relay is enabled, relaying the message");
+            //ESP_LOGI(TAG, "Relay feature is enabled, relaying the message...");
         }
         if(flag ==1)
         {
