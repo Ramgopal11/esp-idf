@@ -47,7 +47,7 @@ static void status_confirmation_callback(TimerHandle_t xTimer);
 static esp_ble_mesh_cfg_srv_t config_server = {
     /* 3 transmissions with 20ms interval */
     .net_transmit = ESP_BLE_MESH_TRANSMIT(2, 20),
-    .relay = ESP_BLE_MESH_RELAY_DISABLED,
+    .relay = ESP_BLE_MESH_RELAY_ENABLED,
     .relay_retransmit = ESP_BLE_MESH_TRANSMIT(2, 20),
     .beacon = ESP_BLE_MESH_BEACON_ENABLED,
 #if defined(CONFIG_BLE_MESH_GATT_PROXY_SERVER)
@@ -174,11 +174,12 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
             board_led_operation(led->pin, onoff);
             flag=1;
             //if(config_server.relay == 0x01)
-            //ESP_LOGI(TAG, "Relay Feature Is Enabled, Relaying The Message...");
+            //ESP_LOGI(TAG, "Relay feature is enabled, relaying the message...");
         }
-        if(flag ==1)
+
+        if(flag == 1)
         {
-        int random_delay_ms = esp_random() % 30001;
+        int random_delay_ms = 0;
         TimerArgs *timer_args = (TimerArgs *)malloc(sizeof(TimerArgs));
         if (timer_args != NULL) {
             timer_args->model = model;
@@ -240,7 +241,7 @@ static void example_handle_gen_onoff_msg(esp_ble_mesh_model_t *model,
 static void status_confirmation_callback(TimerHandle_t xTimer)
 {
     TimerArgs *timer_args = (TimerArgs *)pvTimerGetTimerID(xTimer);
-    ESP_LOGI(TAG,"Publishing Status Confirmation Message");
+    ESP_LOGI(TAG,"Call back for publish");
     esp_ble_mesh_model_t *model = timer_args->model;
     esp_ble_mesh_gen_onoff_srv_t *srv = timer_args->srv;
         esp_ble_mesh_msg_ctx_t *ctx = timer_args->ctx;
@@ -250,13 +251,19 @@ static void status_confirmation_callback(TimerHandle_t xTimer)
     if(type == 1)
     {
         srv->state.onoff=srv->state.onoff+10;
+        for(int i=0;i<100;i++)
+        {
         esp_ble_mesh_server_model_send_msg(model, ctx,
                 ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
+        }
     }
     else if(type == 2)
 {  srv->state.onoff=srv->state.onoff+20;
+for(int i=0;i<100;i++)
+{
     esp_ble_mesh_server_model_send_msg(model, ctx,
                 ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
+}
 }
     free(timer_args);
     
