@@ -174,7 +174,7 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
             board_led_operation(led->pin, onoff);
             flag=1;
             //if(config_server.relay == 0x01)
-            //ESP_LOGI(TAG, "Relay Feature Is Enabled, Relaying The Message...");
+            //ESP_LOGI(TAG, "Relay feature is enabled, relaying the message...");
         }
         if(flag ==1)
         {
@@ -240,7 +240,7 @@ static void example_handle_gen_onoff_msg(esp_ble_mesh_model_t *model,
 static void status_confirmation_callback(TimerHandle_t xTimer)
 {
     TimerArgs *timer_args = (TimerArgs *)pvTimerGetTimerID(xTimer);
-    ESP_LOGI(TAG,"Publishing Status Confirmation Message");
+    ESP_LOGI(TAG,"Call back for publish");
     esp_ble_mesh_model_t *model = timer_args->model;
     esp_ble_mesh_gen_onoff_srv_t *srv = timer_args->srv;
         esp_ble_mesh_msg_ctx_t *ctx = timer_args->ctx;
