@@ -44,7 +44,7 @@ extern "C" {
 #define LED_ON  1
 #define LED_OFF 0
 
-#define BUTTON_IO_NUM         12
+#define BUTTON_IO_NUM         GPIO_NUM_9
 
 struct _led_state {
     uint8_t current;
