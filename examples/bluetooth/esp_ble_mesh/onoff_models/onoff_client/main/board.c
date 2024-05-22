@@ -18,13 +18,11 @@
 #define TAG "BOARD"
 
 #define BUTTON_IO_NUM           12
-#define BUTTON_IO_NUM1           27
 #define BUTTON_ACTIVE_LEVEL     0
 #define BUTTON_ACTIVE_LEVEL1     0
-
-extern void example_ble_mesh_send_gen_onoff_set(void);
-extern void example_ble_mesh_send_gen_onoff_set1(void);
-
+extern void start_experiment(void);
+extern void stop_experiment(void);
+bool toggle=true;
 struct _led_state led_state[3] = {
     { LED_OFF, LED_OFF, LED_R, "red"   },
     { LED_OFF, LED_OFF, LED_G, "green" },
@@ -62,25 +60,23 @@ static void board_led_init(void)
 static void button_tap_cb(void* arg)
 {
     ESP_LOGI(TAG, "tap cb (%s)", (char *)arg);
-
-    example_ble_mesh_send_gen_onoff_set();
+    if(toggle)
+    {
+    start_experiment();
+    toggle=!toggle;
+    }
+    else{
+    stop_experiment();
+    toggle=!toggle;
+    }
+    
 }
 
-static void button_tap_cb1(void* arg)
-{
-    ESP_LOGI(TAG, "tap cb (%s)", (char *)arg);
-
-    example_ble_mesh_send_gen_onoff_set1();
-}
 static void board_button_init(void)
 {
     button_handle_t btn_handle = iot_button_create(BUTTON_IO_NUM, BUTTON_ACTIVE_LEVEL);
     if (btn_handle) {
         iot_button_set_evt_cb(btn_handle, BUTTON_CB_RELEASE, button_tap_cb, "RELEASE");
-    }
-    button_handle_t btn_handle1 = iot_button_create(BUTTON_IO_NUM1, BUTTON_ACTIVE_LEVEL1);
-    if (btn_handle1) {
-        iot_button_set_evt_cb(btn_handle1, BUTTON_CB_RELEASE, button_tap_cb1, "RELEASE");
     }
 }
 

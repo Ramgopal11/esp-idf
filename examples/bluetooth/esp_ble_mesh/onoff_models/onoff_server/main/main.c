@@ -166,15 +166,27 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
             int flag = 0;
             if (ctx->recv_dst == 0xC001)
         {
-            //change_relay_mode(onoff); 
-            //flag=1;
+            // led = &led_state[model->element->element_addr - primary_addr];
+            // board_led_operation(led->pin, onoff);
+            // flag=1;
+        }
+        else if(ctx->recv_dst == 0xC002)
+        {
+            ctx->addr=0xC002;
+            esp_ble_mesh_gen_onoff_srv_t *srv = (esp_ble_mesh_gen_onoff_srv_t *)model->user_data;
+srv->state.onoff+=40;
+            esp_ble_mesh_server_model_send_msg(model, ctx,
+                ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
         }
         else {
             led = &led_state[model->element->element_addr - primary_addr];
             board_led_operation(led->pin, onoff);
             flag=1;
-            //if(config_server.relay == 0x01)
-            //ESP_LOGI(TAG, "Relay feature is enabled, relaying the message...");
+            ctx->addr=0xC002;
+            esp_ble_mesh_gen_onoff_srv_t *srv = (esp_ble_mesh_gen_onoff_srv_t *)model->user_data;
+            srv->state.onoff+=30;
+            esp_ble_mesh_server_model_send_msg(model, ctx,
+                ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
         }
         if(flag ==1)
         {
@@ -355,6 +367,8 @@ static void example_ble_mesh_config_server_cb(esp_ble_mesh_cfg_server_cb_event_t
                 esp_ble_mesh_node_bind_app_key_to_local_model(composition.elements[i].element_addr,0xffff,0x1000,param->value.state_change.appkey_add.app_idx);
                 esp_ble_mesh_model_subscribe_group_addr(composition.elements[i].element_addr,0xffff,0x1000,0xC000);
                 esp_ble_mesh_model_subscribe_group_addr(composition.elements[i].element_addr,0xffff,0x1000,0xC001);
+                                esp_ble_mesh_model_subscribe_group_addr(composition.elements[i].element_addr,0xffff,0x1000,0xC002);
+
 
             }
             break;

@@ -30,7 +30,8 @@
 #define TAG "EXAMPLE"
 
 #define CID_ESP 0x02E5
-
+int c=0;
+bool ch=true;
 static uint8_t dev_uuid[16] = { 0xdd, 0xdd };
 
 static struct example_info_store {
@@ -38,6 +39,7 @@ static struct example_info_store {
     uint16_t app_idx;   /* AppKey Index */
     uint8_t  onoff;     /* Remote OnOff */
     uint8_t  onoff1;     /* Remote OnOff */
+    uint8_t  onoff2;     /* Remote OnOff */
     uint8_t  tid;       /* Message TID */
 } __attribute__((packed)) store = {
     .net_idx = ESP_BLE_MESH_KEY_UNUSED,
@@ -52,6 +54,9 @@ float sent=0;
 float recv=0;
 float pdr;
 static TimerHandle_t delay_timer;
+static TimerHandle_t delay_timer1;
+static TimerHandle_t delay_timer2;
+static TimerHandle_t delay_timer3;
 
 static nvs_handle_t NVS_HANDLE;
 static const char * NVS_KEY = "onoff_client";
@@ -145,7 +150,19 @@ static void prov_complete(uint16_t net_idx, uint16_t addr, uint8_t flags, uint32
      * just before restoring it.
      */
 }
-
+static void change_relay_mode(uint8_t state)
+{
+    if(state == 1)
+    {
+        config_server.relay = ESP_BLE_MESH_RELAY_ENABLED;
+        ESP_LOGI(TAG,"RELAY ENABLED");
+    }
+    else
+    {
+        config_server.relay = ESP_BLE_MESH_RELAY_DISABLED;
+                ESP_LOGI(TAG,"RELAY DISABLED");
+    }
+}
 static void example_ble_mesh_provisioning_cb(esp_ble_mesh_prov_cb_event_t event,
                                              esp_ble_mesh_prov_cb_param_t *param)
 {
@@ -179,6 +196,7 @@ static void example_ble_mesh_provisioning_cb(esp_ble_mesh_prov_cb_event_t event,
         break;
     }
 }
+void start_experiment();
 void pdr_callback()
 {
     pdr=(recv/sent)*100;
@@ -264,6 +282,64 @@ void example_ble_mesh_send_gen_onoff_set1(void)
         }
     mesh_example_info_store(); /* Store proper mesh example info */
 }
+void example_ble_mesh_send_gen_onoff_set2(void)
+{
+    sent=m;
+    recv=0;
+    esp_ble_mesh_generic_client_set_state_t set = {0};
+    esp_ble_mesh_client_common_param_t common = {0};
+    esp_err_t err = ESP_OK;
+
+    common.opcode = ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_SET_UNACK;
+    common.model = onoff_client.model;
+    common.ctx.net_idx = store.net_idx;
+    common.ctx.app_idx = store.app_idx;
+    common.ctx.addr = 0xC002;   /* to all light nodes */
+    common.ctx.send_ttl = 3;
+    common.msg_timeout = 0;     /* 0 indicates that timeout value from menuconfig will be used */
+#if ESP_IDF_VERSION < ESP_IDF_VERSION_VAL(5, 2, 0)
+    common.msg_role = ROLE_NODE;
+#endif
+
+    set.onoff_set.op_en = false;
+    set.onoff_set.onoff = store.onoff2;
+    set.onoff_set.tid = store.tid++;
+
+    err = esp_ble_mesh_generic_client_set_state(&common, &set);
+    if (err) {
+        ESP_LOGE(TAG, "Send Generic OnOff Set Unack failed");
+        return;
+    }
+
+    store.onoff2 = !store.onoff2;
+     if (delay_timer != NULL) {
+            xTimerStop(delay_timer, portMAX_DELAY);
+        }
+
+            delay_timer = xTimerCreate("RandomDelayTimer", pdMS_TO_TICKS(30001), pdFALSE, NULL, pdr_callback);
+        if (delay_timer != NULL) {
+            xTimerStart(delay_timer, portMAX_DELAY);
+        }
+    mesh_example_info_store(); /* Store proper mesh example info */
+}
+void start_experiment()
+{
+while(1)
+{
+        example_ble_mesh_send_gen_onoff_set2();
+        vTaskDelay(pdMS_TO_TICKS(600));
+        example_ble_mesh_send_gen_onoff_set();
+        vTaskDelay(pdMS_TO_TICKS(500));
+        example_ble_mesh_send_gen_onoff_set2();
+        vTaskDelay(pdMS_TO_TICKS(6001));
+}
+}
+void stop_experiment(void)
+{
+    if (delay_timer1 != NULL) {
+            xTimerStop(delay_timer1, portMAX_DELAY);
+        } 
+}
 static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_event_t event,
                                                esp_ble_mesh_generic_client_cb_param_t *param)
 {
@@ -296,6 +372,49 @@ static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_ev
             {
             ESP_LOGI(TAG, "Received status confirmation from relay, status: %d", param->status_cb.onoff_status.present_onoff-20);
             }
+//             else if(param->status_cb.onoff_status.present_onoff == 30 || param->status_cb.onoff_status.present_onoff == 31)
+//             {
+// if(c==0)
+// {
+//     board_led_operation(LED_G, LED_ON);
+//     vTaskDelay(pdMS_TO_TICKS(350));
+//     board_led_operation(LED_G, LED_OFF);
+//     store.onoff1=param->status_cb.onoff_status.present_onoff-30;
+// example_ble_mesh_send_gen_onoff_set1();
+// c=c+1;
+// }
+// else{
+//     c=c+1;
+//     if(c==3)
+//     {
+//         c=0;
+//     }
+
+// }
+//             }
+//             else{
+//                 if(c==0)
+// {
+//     board_led_operation(LED_G, LED_ON);
+//     vTaskDelay(pdMS_TO_TICKS(200));
+//     board_led_operation(LED_G, LED_OFF);
+//         vTaskDelay(pdMS_TO_TICKS(100));
+//     board_led_operation(LED_G, LED_ON);
+//     vTaskDelay(pdMS_TO_TICKS(200));
+//     board_led_operation(LED_G, LED_OFF);
+//             change_relay_mode(param->status_cb.onoff_status.present_onoff-40);
+// c=c+1;
+// }
+// else{
+//     c=c+1;
+//     if(c==3)
+//     {
+//         c=0;
+//     }
+
+// }
+                
+//             }
         }
         break;
     case ESP_BLE_MESH_GENERIC_CLIENT_TIMEOUT_EVT:
@@ -325,6 +444,8 @@ static void example_ble_mesh_config_server_cb(esp_ble_mesh_cfg_server_cb_event_t
             {
                 ESP_LOGI(TAG, "elem_addr 0x%04x, app_idx 0x%04x, cid 0x%04x, mod_id 0x%04x",composition.elements[i].element_addr,param->value.state_change.appkey_add.app_idx,0xffff,0x1000);
             esp_ble_mesh_node_bind_app_key_to_local_model(composition.elements[i].element_addr,0xffff,0x1001,param->value.state_change.appkey_add.app_idx);
+            esp_ble_mesh_model_subscribe_group_addr(composition.elements[i].element_addr,0xffff,0x1001,0xC002);
+            store.app_idx = param->value.state_change.appkey_add.app_idx;
             }
             break;
         case ESP_BLE_MESH_MODEL_OP_MODEL_APP_BIND:
