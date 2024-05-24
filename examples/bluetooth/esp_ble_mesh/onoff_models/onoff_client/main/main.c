@@ -26,12 +26,19 @@
 #include "board.h"
 #include "ble_mesh_example_init.h"
 #include "ble_mesh_example_nvs.h"
+#include "esp_timer.h"
 
 #define TAG "EXAMPLE"
 
 #define CID_ESP 0x02E5
 int c=0;
-bool ch=true;
+uint8_t data[8];
+int len=2;//Change size to number of expected status confirmation messages
+int64_t time_arr[2];
+int64_t status_cont_time;
+int64_t sync_time;
+int pt=0;
+bool first=true;
 static uint8_t dev_uuid[16] = { 0xdd, 0xdd };
 
 static struct example_info_store {
@@ -202,11 +209,27 @@ void pdr_callback()
     pdr=(recv/sent)*100;
     ESP_LOGI(TAG, "Current PDR is : %f percent",pdr);
     recv=0;
+int64_t min=time_arr[0];
+int64_t max=time_arr[0];
+for(int i=0;i<len;i++)
+{
+        if(time_arr[i]<min)
+        {
+            min=time_arr[i];
+        }
+        if(time_arr[i]>max)
+        {
+            max=time_arr[i];
+        }
+                 ESP_LOGI(TAG, "Time array: %lld",time_arr[i]);
+}
+int64_t consistent_time=max-min;
+    int64_t execution_time=max-(status_cont_time-sync_time);
+    ESP_LOGI(TAG, "Consistent time is : %lld",consistent_time);
+    ESP_LOGI(TAG, "Execution time is : %lld",execution_time);
 }
 void example_ble_mesh_send_gen_onoff_set(void)
 {
-    sent=m;
-    recv=0;
     esp_ble_mesh_generic_client_set_state_t set = {0};
     esp_ble_mesh_client_common_param_t common = {0};
     esp_err_t err = ESP_OK;
@@ -237,7 +260,7 @@ void example_ble_mesh_send_gen_onoff_set(void)
             xTimerStop(delay_timer, portMAX_DELAY);
         }
 
-            delay_timer = xTimerCreate("RandomDelayTimer", pdMS_TO_TICKS(30001), pdFALSE, NULL, pdr_callback);
+            delay_timer = xTimerCreate("RandomDelayTimer", pdMS_TO_TICKS(33001), pdFALSE, NULL, pdr_callback);
         if (delay_timer != NULL) {
             xTimerStart(delay_timer, portMAX_DELAY);
         }
@@ -245,8 +268,6 @@ void example_ble_mesh_send_gen_onoff_set(void)
 }
 void example_ble_mesh_send_gen_onoff_set1(void)
 {
-    sent=n;
-    recv=0;
     esp_ble_mesh_generic_client_set_state_t set = {0};
     esp_ble_mesh_client_common_param_t common = {0};
     esp_err_t err = ESP_OK;
@@ -284,8 +305,6 @@ void example_ble_mesh_send_gen_onoff_set1(void)
 }
 void example_ble_mesh_send_gen_onoff_set2(void)
 {
-    sent=m;
-    recv=0;
     esp_ble_mesh_generic_client_set_state_t set = {0};
     esp_ble_mesh_client_common_param_t common = {0};
     esp_err_t err = ESP_OK;
@@ -324,14 +343,43 @@ void example_ble_mesh_send_gen_onoff_set2(void)
 }
 void start_experiment()
 {
-while(1)
-{
-        example_ble_mesh_send_gen_onoff_set2();
-        vTaskDelay(pdMS_TO_TICKS(600));
+    if(first)
+    {
         example_ble_mesh_send_gen_onoff_set();
-        vTaskDelay(pdMS_TO_TICKS(500));
+        store.onoff = !store.onoff;
+        vTaskDelay(pdMS_TO_TICKS(355));
+      example_ble_mesh_send_gen_onoff_set1(); 
+      store.onoff1 = !store.onoff1;
+      sync_time=esp_timer_get_time();
+      first=false;
+    }
+    status_cont_time=esp_timer_get_time();
         example_ble_mesh_send_gen_onoff_set2();
-        vTaskDelay(pdMS_TO_TICKS(6001));
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        example_ble_mesh_send_gen_onoff_set();
+        vTaskDelay(pdMS_TO_TICKS(1000));
+        example_ble_mesh_send_gen_onoff_set2();
+        sent=m;
+}
+void save_time()
+{
+    int64_t reconstructed_value = 0;
+
+// Assuming buffer is a uint8_t array of size 8
+reconstructed_value = (int64_t)data[0];
+reconstructed_value |= ((int64_t)data[1]) << 8;
+reconstructed_value |= ((int64_t)data[2]) << 16;
+reconstructed_value |= ((int64_t)data[3]) << 24;
+reconstructed_value |= ((int64_t)data[4]) << 32;
+reconstructed_value |= ((int64_t)data[5]) << 40;
+reconstructed_value |= ((int64_t)data[6]) << 48;
+reconstructed_value |= ((int64_t)data[7]) << 56;
+time_arr[pt]=reconstructed_value;
+
+pt+=1;
+if(pt==len)
+{
+    pt=0;
 }
 }
 void stop_experiment(void)
@@ -362,16 +410,32 @@ static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_ev
     case ESP_BLE_MESH_GENERIC_CLIENT_PUBLISH_EVT:
         ESP_LOGI(TAG, "ESP_BLE_MESH_GENERIC_CLIENT_PUBLISH_EVT");
         if (param->params->opcode == ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS) {
-            recv=recv+1;
-            if (param->status_cb.onoff_status.present_onoff == 10 || param->status_cb.onoff_status.present_onoff == 11)
+            //take the time and store it in time_arr, then increment pt by 1 then check if pt=2 reset pt
+            if(c!=0)
             {
-                            ESP_LOGI(TAG, "Received status confirmation from light, status: %d", param->status_cb.onoff_status.present_onoff-10);
+                data[c-1]=param->status_cb.onoff_status.present_onoff;
+                c+=1;
+                ESP_LOGI(TAG, "Here");
+                if(c==9)
+                {
+                    c=0;
+                    save_time();
+                }
+            }
+            else if (param->status_cb.onoff_status.present_onoff == 10 || param->status_cb.onoff_status.present_onoff == 11)
+            {
+                recv=recv+1;
+                            ESP_LOGI(TAG, "Received status confirmation from light, status: %d", param->status_cb.onoff_status.present_onoff-10);  
+                            c=1;
 
             }
             else if (param->status_cb.onoff_status.present_onoff == 20 || param->status_cb.onoff_status.present_onoff == 21)
             {
+                recv=recv+1;
             ESP_LOGI(TAG, "Received status confirmation from relay, status: %d", param->status_cb.onoff_status.present_onoff-20);
+            c=1;
             }
+            ESP_LOGI(TAG, "Received: %d", param->status_cb.onoff_status.present_onoff);
 //             else if(param->status_cb.onoff_status.present_onoff == 30 || param->status_cb.onoff_status.present_onoff == 31)
 //             {
 // if(c==0)
@@ -415,7 +479,7 @@ static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_ev
 // }
                 
 //             }
-        }
+}
         break;
     case ESP_BLE_MESH_GENERIC_CLIENT_TIMEOUT_EVT:
         ESP_LOGI(TAG, "ESP_BLE_MESH_GENERIC_CLIENT_TIMEOUT_EVT");

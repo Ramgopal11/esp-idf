@@ -86,13 +86,15 @@ void app_main(void)
 #endif
 
     char strftime_buf[64];
-
+struct timeval tv_now;
+gettimeofday(&tv_now, NULL);
+int64_t time_us = (int64_t)tv_now.tv_sec * 1000000L + (int64_t)tv_now.tv_usec;
     // Set timezone to Eastern Standard Time and print local time
     setenv("TZ", "EST5EDT,M3.2.0/2,M11.1.0", 1);
     tzset();
     localtime_r(&now, &timeinfo);
     strftime(strftime_buf, sizeof(strftime_buf), "%c", &timeinfo);
-    ESP_LOGI(TAG, "The current date/time in New York is: %s", strftime_buf);
+    ESP_LOGI(TAG, "The current date/time in New York is: %s %lld", strftime_buf, time_us);
 
     // Set timezone to China Standard Time
     setenv("TZ", "CST-8", 1);

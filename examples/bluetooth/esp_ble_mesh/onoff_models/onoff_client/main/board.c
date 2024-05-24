@@ -14,7 +14,6 @@
 
 #include "iot_button.h"
 #include "board.h"
-
 #define TAG "BOARD"
 
 #define BUTTON_IO_NUM           12
@@ -60,15 +59,7 @@ static void board_led_init(void)
 static void button_tap_cb(void* arg)
 {
     ESP_LOGI(TAG, "tap cb (%s)", (char *)arg);
-    if(toggle)
-    {
     start_experiment();
-    toggle=!toggle;
-    }
-    else{
-    stop_experiment();
-    toggle=!toggle;
-    }
     
 }
 

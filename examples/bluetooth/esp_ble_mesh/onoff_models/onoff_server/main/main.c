@@ -24,6 +24,7 @@
 #include "esp_ble_mesh_config_model_api.h"
 #include "esp_ble_mesh_generic_model_api.h"
 #include "esp_ble_mesh_local_data_operation_api.h"
+#include "esp_timer.h"
 
 #include "board.h"
 #include "ble_mesh_example_init.h"
@@ -31,7 +32,9 @@
 #define TAG "EXAMPLE"
 
 #define CID_ESP 0x02E5
-
+ int64_t time_sync;
+ int64_t state_change_time;
+ bool sync=true;
 extern struct _led_state led_state[3];
 
 static uint8_t dev_uuid[16] = { 0xdd, 0xdd };
@@ -41,6 +44,12 @@ typedef struct {
     esp_ble_mesh_gen_onoff_srv_t *srv;
     esp_ble_mesh_msg_ctx_t *ctx;
     int type;
+    uint8_t st;
+        uint16_t net;
+    uint16_t app;
+    uint16_t addr;
+    uint16_t recv_dst;
+
 } TimerArgs;
 static void status_confirmation_callback(TimerHandle_t xTimer);
 
@@ -166,39 +175,63 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
             int flag = 0;
             if (ctx->recv_dst == 0xC001)
         {
+            // if(sync)
+            // {
+            // time_sync=esp_timer_get_time();
+            // sync=!sync;
+            // }
+            // else{
+                //state_change_time=esp_timer_get_time();
             // led = &led_state[model->element->element_addr - primary_addr];
             // board_led_operation(led->pin, onoff);
             // flag=1;
+            // }
         }
         else if(ctx->recv_dst == 0xC002)
         {
-            ctx->addr=0xC002;
-            esp_ble_mesh_gen_onoff_srv_t *srv = (esp_ble_mesh_gen_onoff_srv_t *)model->user_data;
-srv->state.onoff+=40;
-            esp_ble_mesh_server_model_send_msg(model, ctx,
-                ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
+//             ctx->addr=0xC002;
+//             esp_ble_mesh_gen_onoff_srv_t *srv = (esp_ble_mesh_gen_onoff_srv_t *)model->user_data;
+// srv->state.onoff+=40;
+//             esp_ble_mesh_server_model_send_msg(model, ctx,
+//                 ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
+//                 srv->state.onoff-=40;
         }
         else {
+            if(sync)
+            {
+            time_sync=esp_timer_get_time();
+            sync=!sync;
+            }
+            else{
             led = &led_state[model->element->element_addr - primary_addr];
             board_led_operation(led->pin, onoff);
             flag=1;
-            ctx->addr=0xC002;
-            esp_ble_mesh_gen_onoff_srv_t *srv = (esp_ble_mesh_gen_onoff_srv_t *)model->user_data;
-            srv->state.onoff+=30;
-            esp_ble_mesh_server_model_send_msg(model, ctx,
-                ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
+            state_change_time=esp_timer_get_time();
         }
-        if(flag ==1)
+        }
+        if(flag == 1)
         {
         int random_delay_ms = esp_random() % 30001;
         TimerArgs *timer_args = (TimerArgs *)malloc(sizeof(TimerArgs));
         if (timer_args != NULL) {
             timer_args->model = model;
             timer_args->srv = (esp_ble_mesh_gen_onoff_srv_t *)model->user_data;
+            timer_args->st=timer_args->srv->state.onoff;
             timer_args->ctx=ctx;
+            timer_args->net=ctx->net_idx;
+            timer_args->app=ctx->app_idx;
+            timer_args->addr=ctx->addr;
+            timer_args->recv_dst=ctx->recv_dst;
+
             if(ctx->recv_dst == 0xC000)
             {
                 timer_args->type=1;
+                ctx->addr=0xC002;
+            esp_ble_mesh_gen_onoff_srv_t *srv = (esp_ble_mesh_gen_onoff_srv_t *)model->user_data;
+            srv->state.onoff+=30;
+            esp_ble_mesh_server_model_send_msg(model, ctx,
+                ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
+                srv->state.onoff-=30;
             }
             else if(ctx->recv_dst == 0xC001)
             {
@@ -207,18 +240,23 @@ srv->state.onoff+=40;
         if (random_delay_timer != NULL) {
             xTimerStop(random_delay_timer, portMAX_DELAY);
         }
+        ESP_LOGI(TAG,"three %u",timer_args->srv->state.onoff);
+if (ctx && ctx->addr == ESP_BLE_MESH_ADDR_UNASSIGNED) {
+        ESP_LOGI(TAG,"Invalid destination address 0x0000");
+    }
 
             random_delay_timer = xTimerCreate("RandomDelayTimer", pdMS_TO_TICKS(random_delay_ms), pdFALSE, (void *)timer_args, status_confirmation_callback);
         if (random_delay_timer != NULL) {
             xTimerStart(random_delay_timer, portMAX_DELAY);
         }
-        }
+                flag=0;
                 }
         }
     } else if (ctx->recv_dst == 0xFFFF) {
         led = &led_state[model->element->element_addr - primary_addr];
         board_led_operation(led->pin, onoff);
     }
+}
 }
 
 static void example_handle_gen_onoff_msg(esp_ble_mesh_model_t *model,
@@ -255,14 +293,48 @@ static void status_confirmation_callback(TimerHandle_t xTimer)
     ESP_LOGI(TAG,"Call back for publish");
     esp_ble_mesh_model_t *model = timer_args->model;
     esp_ble_mesh_gen_onoff_srv_t *srv = timer_args->srv;
+    srv->state.onoff=timer_args->st;
         esp_ble_mesh_msg_ctx_t *ctx = timer_args->ctx;
+        ctx->net_idx=timer_args->net;
+                ctx->app_idx=timer_args->app;
+        ctx->addr=timer_args->addr;
+        ctx->recv_dst=timer_args->recv_dst;
+
+        if (ctx && ctx->addr == ESP_BLE_MESH_ADDR_UNASSIGNED) {
+        ESP_LOGI(TAG,"Invalid destination address NOW?????");
+    }
         int type = timer_args->type;
     esp_ble_mesh_model_publish(model, ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS,
             sizeof(srv->state.onoff), &srv->state.onoff, ROLE_NODE);
+            int64_t diff=state_change_time-time_sync;
+            uint8_t data[8];
+data[0] = (uint8_t)(diff & 0xFF);
+data[1] = (uint8_t)((diff >> 8) & 0xFF);
+data[2] = (uint8_t)((diff >> 16) & 0xFF);
+data[3] = (uint8_t)((diff >> 24) & 0xFF);
+data[4] = (uint8_t)((diff >> 32) & 0xFF);
+data[5] = (uint8_t)((diff >> 40) & 0xFF);
+data[6] = (uint8_t)((diff >> 48) & 0xFF);
+data[7] = (uint8_t)((diff >> 56) & 0xFF); 
+int64_t reconstructed_value = 0;
+
+// Assuming buffer is a uint8_t array of size 8
+reconstructed_value = (int64_t)data[0];
+reconstructed_value |= ((int64_t)data[1]) << 8;
+reconstructed_value |= ((int64_t)data[2]) << 16;
+reconstructed_value |= ((int64_t)data[3]) << 24;
+reconstructed_value |= ((int64_t)data[4]) << 32;
+reconstructed_value |= ((int64_t)data[5]) << 40;
+reconstructed_value |= ((int64_t)data[6]) << 48;
+reconstructed_value |= ((int64_t)data[7]) << 56; 
+ESP_LOGI(TAG,"%lld ", diff);
+ESP_LOGI(TAG,"%lld ", reconstructed_value);
+
     if(type == 1)
     {
+        ESP_LOGI(TAG,"one %u",srv->state.onoff);
         srv->state.onoff=srv->state.onoff+10;
-        esp_ble_mesh_server_model_send_msg(model, ctx,
+         esp_ble_mesh_server_model_send_msg(model, ctx,
                 ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
     }
     else if(type == 2)
@@ -270,8 +342,13 @@ static void status_confirmation_callback(TimerHandle_t xTimer)
     esp_ble_mesh_server_model_send_msg(model, ctx,
                 ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
 }
-    free(timer_args);
-    
+    for(int i=0;i<8;i++)
+    {
+        ESP_LOGI(TAG,"two %u",data[i]);
+        esp_ble_mesh_server_model_send_msg(model, ctx,
+                ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(data[i]), &data[i]);
+    }
+        free(timer_args);
 }
 
 static void example_ble_mesh_provisioning_cb(esp_ble_mesh_prov_cb_event_t event,
