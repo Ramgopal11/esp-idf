@@ -234,10 +234,6 @@ srv->state.onoff+=40;
         if (random_delay_timer != NULL) {
             xTimerStop(random_delay_timer, portMAX_DELAY);
         }
-        ESP_LOGI(TAG,"three %u",timer_args->srv->state.onoff);
-if (ctx && ctx->addr == ESP_BLE_MESH_ADDR_UNASSIGNED) {
-        ESP_LOGI(TAG,"Invalid destination address 0x0000");
-    }
 
             random_delay_timer = xTimerCreate("RandomDelayTimer", pdMS_TO_TICKS(random_delay_ms), pdFALSE, (void *)timer_args, status_confirmation_callback);
         if (random_delay_timer != NULL) {
@@ -289,9 +285,6 @@ static void status_confirmation_callback(TimerHandle_t xTimer)
     esp_ble_mesh_gen_onoff_srv_t *srv = timer_args->srv;
         esp_ble_mesh_msg_ctx_t *ctx = timer_args->ctx;
 
-        if (ctx && ctx->addr == ESP_BLE_MESH_ADDR_UNASSIGNED) {
-        ESP_LOGI(TAG,"Invalid destination address NOW?????");
-    }
         int type = timer_args->type;
     esp_ble_mesh_model_publish(model, ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS,
             sizeof(srv->state.onoff), &srv->state.onoff, ROLE_NODE);
@@ -305,23 +298,10 @@ data[4] = (uint8_t)((diff >> 32) & 0xFF);
 data[5] = (uint8_t)((diff >> 40) & 0xFF);
 data[6] = (uint8_t)((diff >> 48) & 0xFF);
 data[7] = (uint8_t)((diff >> 56) & 0xFF); 
-int64_t reconstructed_value = 0;
-
-// Assuming buffer is a uint8_t array of size 8
-reconstructed_value = (int64_t)data[0];
-reconstructed_value |= ((int64_t)data[1]) << 8;
-reconstructed_value |= ((int64_t)data[2]) << 16;
-reconstructed_value |= ((int64_t)data[3]) << 24;
-reconstructed_value |= ((int64_t)data[4]) << 32;
-reconstructed_value |= ((int64_t)data[5]) << 40;
-reconstructed_value |= ((int64_t)data[6]) << 48;
-reconstructed_value |= ((int64_t)data[7]) << 56; 
 ESP_LOGI(TAG,"%lld ", diff);
-ESP_LOGI(TAG,"%lld ", reconstructed_value);
 
     if(type == 1)
     {
-        ESP_LOGI(TAG,"one %u",srv->state.onoff);
         srv->state.onoff=srv->state.onoff+10;
          esp_ble_mesh_server_model_send_msg(model, ctx,
                 ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
@@ -333,7 +313,6 @@ ESP_LOGI(TAG,"%lld ", reconstructed_value);
 }
     for(int i=0;i<8;i++)
     {
-        ESP_LOGI(TAG,"two %u",data[i]);
         esp_ble_mesh_server_model_send_msg(model, ctx,
                 ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(data[i]), &data[i]);
     }

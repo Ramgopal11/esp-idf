@@ -32,6 +32,7 @@
 
 #define CID_ESP 0x02E5
 int c=0;
+int c1=0;
 uint8_t data[8];
 int len=2;//Change size to number of expected status confirmation messages
 int64_t time_arr[2];
@@ -53,6 +54,7 @@ static struct example_info_store {
     .app_idx = ESP_BLE_MESH_KEY_UNUSED,
     .onoff = LED_OFF,
     .onoff1 = LED_OFF,
+    .onoff2 = LED_OFF,
     .tid = 0x0,
 };
 float m=1;//Number of lights
@@ -323,14 +325,6 @@ void example_ble_mesh_send_gen_onoff_set2(void)
     }
 
     store.onoff2 = !store.onoff2;
-     if (delay_timer != NULL) {
-            xTimerStop(delay_timer, portMAX_DELAY);
-        }
-
-            delay_timer = xTimerCreate("RandomDelayTimer", pdMS_TO_TICKS(30001), pdFALSE, NULL, pdr_callback);
-        if (delay_timer != NULL) {
-            xTimerStart(delay_timer, portMAX_DELAY);
-        }
     mesh_example_info_store(); /* Store proper mesh example info */
 }
 void start_experiment()
@@ -403,14 +397,13 @@ static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_ev
         ESP_LOGI(TAG, "ESP_BLE_MESH_GENERIC_CLIENT_PUBLISH_EVT");
         if (param->params->opcode == ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS) {
             //take the time and store it in time_arr, then increment pt by 1 then check if pt=2 reset pt
-            if(c!=0)
+            if(c1!=0)
             {
-                data[c-1]=param->status_cb.onoff_status.present_onoff;
-                c+=1;
-                ESP_LOGI(TAG, "Here");
-                if(c==9)
+                data[c1-1]=param->status_cb.onoff_status.present_onoff;
+                c1+=1;
+                if(c1==9)
                 {
-                    c=0;
+                    c1=0;
                     save_time();
                 }
             }
@@ -418,16 +411,15 @@ static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_ev
             {
                 recv=recv+1;
                             ESP_LOGI(TAG, "Received status confirmation from light, status: %d", param->status_cb.onoff_status.present_onoff-10);  
-                            c=1;
+                            c1=1;
 
             }
             else if (param->status_cb.onoff_status.present_onoff == 20 || param->status_cb.onoff_status.present_onoff == 21)
             {
                 recv=recv+1;
             ESP_LOGI(TAG, "Received status confirmation from relay, status: %d", param->status_cb.onoff_status.present_onoff-20);
-            c=1;
+            c1=1;
             }
-            ESP_LOGI(TAG, "Received: %d", param->status_cb.onoff_status.present_onoff);
 //             else if(param->status_cb.onoff_status.present_onoff == 30 || param->status_cb.onoff_status.present_onoff == 31)
 //             {
 // if(c==0)
@@ -436,6 +428,7 @@ static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_ev
 //     vTaskDelay(pdMS_TO_TICKS(350));
 //     board_led_operation(LED_G, LED_OFF);
 //     store.onoff1=param->status_cb.onoff_status.present_onoff-30;
+//ESP_LOGI(TAG,"Relay is enabled, relaying the message.....");
 // example_ble_mesh_send_gen_onoff_set1();
 // c=c+1;
 // }
