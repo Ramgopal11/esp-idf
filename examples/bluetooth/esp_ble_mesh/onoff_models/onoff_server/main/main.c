@@ -9,6 +9,7 @@
 
 #include <stdio.h>
 #include <string.h>
+#include <stdlib.h>
 #include <inttypes.h>
 #include "esp_random.h"
 
@@ -44,11 +45,6 @@ typedef struct {
     esp_ble_mesh_gen_onoff_srv_t *srv;
     esp_ble_mesh_msg_ctx_t *ctx;
     int type;
-    uint8_t st;
-        uint16_t net;
-    uint16_t app;
-    uint16_t addr;
-    uint16_t recv_dst;
 
 } TimerArgs;
 static void status_confirmation_callback(TimerHandle_t xTimer);
@@ -189,12 +185,12 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
         }
         else if(ctx->recv_dst == 0xC002)
         {
-//             ctx->addr=0xC002;
-//             esp_ble_mesh_gen_onoff_srv_t *srv = (esp_ble_mesh_gen_onoff_srv_t *)model->user_data;
-// srv->state.onoff+=40;
-//             esp_ble_mesh_server_model_send_msg(model, ctx,
-//                 ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
-//                 srv->state.onoff-=40;
+            ctx->addr=0xC002;
+            esp_ble_mesh_gen_onoff_srv_t *srv = (esp_ble_mesh_gen_onoff_srv_t *)model->user_data;
+srv->state.onoff+=40;
+            esp_ble_mesh_server_model_send_msg(model, ctx,
+                ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
+                srv->state.onoff-=40;
         }
         else {
             if(sync)
@@ -214,14 +210,12 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
         int random_delay_ms = esp_random() % 30001;
         TimerArgs *timer_args = (TimerArgs *)malloc(sizeof(TimerArgs));
         if (timer_args != NULL) {
-            timer_args->model = model;
-            timer_args->srv = (esp_ble_mesh_gen_onoff_srv_t *)model->user_data;
-            timer_args->st=timer_args->srv->state.onoff;
-            timer_args->ctx=ctx;
-            timer_args->net=ctx->net_idx;
-            timer_args->app=ctx->app_idx;
-            timer_args->addr=ctx->addr;
-            timer_args->recv_dst=ctx->recv_dst;
+            timer_args->model=(esp_ble_mesh_model_t *)malloc(sizeof(esp_ble_mesh_model_t));
+            memcpy(timer_args->model, model, sizeof(esp_ble_mesh_model_t));
+            timer_args->srv=(esp_ble_mesh_gen_onoff_srv_t *)malloc(sizeof(esp_ble_mesh_gen_onoff_srv_t));
+            memcpy(timer_args->srv, (esp_ble_mesh_gen_onoff_srv_t *)model->user_data, sizeof(esp_ble_mesh_gen_onoff_srv_t));
+            timer_args->ctx=(esp_ble_mesh_msg_ctx_t *)malloc(sizeof(esp_ble_mesh_msg_ctx_t));
+            memcpy(timer_args->ctx, ctx, sizeof(esp_ble_mesh_msg_ctx_t));
 
             if(ctx->recv_dst == 0xC000)
             {
@@ -293,12 +287,7 @@ static void status_confirmation_callback(TimerHandle_t xTimer)
     ESP_LOGI(TAG,"Call back for publish");
     esp_ble_mesh_model_t *model = timer_args->model;
     esp_ble_mesh_gen_onoff_srv_t *srv = timer_args->srv;
-    srv->state.onoff=timer_args->st;
         esp_ble_mesh_msg_ctx_t *ctx = timer_args->ctx;
-        ctx->net_idx=timer_args->net;
-                ctx->app_idx=timer_args->app;
-        ctx->addr=timer_args->addr;
-        ctx->recv_dst=timer_args->recv_dst;
 
         if (ctx && ctx->addr == ESP_BLE_MESH_ADDR_UNASSIGNED) {
         ESP_LOGI(TAG,"Invalid destination address NOW?????");

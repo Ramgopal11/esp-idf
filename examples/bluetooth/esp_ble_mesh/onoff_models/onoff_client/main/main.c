@@ -293,14 +293,6 @@ void example_ble_mesh_send_gen_onoff_set1(void)
         return;
     }
     store.onoff1 = !store.onoff1;
-     if (delay_timer != NULL) {
-            xTimerStop(delay_timer, portMAX_DELAY);
-        }
-
-            delay_timer = xTimerCreate("RandomDelayTimer", pdMS_TO_TICKS(30001), pdFALSE, NULL, pdr_callback);
-        if (delay_timer != NULL) {
-            xTimerStart(delay_timer, portMAX_DELAY);
-        }
     mesh_example_info_store(); /* Store proper mesh example info */
 }
 void example_ble_mesh_send_gen_onoff_set2(void)
@@ -345,17 +337,17 @@ void start_experiment()
 {
     if(first)
     {
+              sync_time=esp_timer_get_time();
         example_ble_mesh_send_gen_onoff_set();
         store.onoff = !store.onoff;
         vTaskDelay(pdMS_TO_TICKS(355));
       example_ble_mesh_send_gen_onoff_set1(); 
       store.onoff1 = !store.onoff1;
-      sync_time=esp_timer_get_time();
       first=false;
     }
-    status_cont_time=esp_timer_get_time();
         example_ble_mesh_send_gen_onoff_set2();
         vTaskDelay(pdMS_TO_TICKS(1000));
+            status_cont_time=esp_timer_get_time();
         example_ble_mesh_send_gen_onoff_set();
         vTaskDelay(pdMS_TO_TICKS(1000));
         example_ble_mesh_send_gen_onoff_set2();
@@ -456,8 +448,9 @@ static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_ev
 
 // }
 //             }
-//             else{
-//                 if(c==0)
+//             else if(param->status_cb.onoff_status.present_onoff == 40 || param->status_cb.onoff_status.present_onoff == 41)
+// {                
+//    if(c==0)
 // {
 //     board_led_operation(LED_G, LED_ON);
 //     vTaskDelay(pdMS_TO_TICKS(200));
