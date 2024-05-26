@@ -57,7 +57,7 @@ static struct example_info_store {
     .onoff2 = LED_OFF,
     .tid = 0x0,
 };
-float m=1;//Number of lights
+float m=2;//Number of lights
 float n=1;//Number of relays
 float sent=0;
 float recv=0;
@@ -331,12 +331,12 @@ void start_experiment()
 {
     if(first)
     {
+        store.onoff2=LED_ON;
               sync_time=esp_timer_get_time();
         example_ble_mesh_send_gen_onoff_set();
-        store.onoff = !store.onoff;
         vTaskDelay(pdMS_TO_TICKS(355));
       example_ble_mesh_send_gen_onoff_set1(); 
-      store.onoff1 = !store.onoff1;
+      store.onoff=LED_ON;
       first=false;
     }
         example_ble_mesh_send_gen_onoff_set2();
@@ -407,7 +407,7 @@ static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_ev
                     save_time();
                 }
             }
-            else if (param->status_cb.onoff_status.present_onoff == 10 || param->status_cb.onoff_status.present_onoff == 11)
+            else  if (param->status_cb.onoff_status.present_onoff == 10 || param->status_cb.onoff_status.present_onoff == 11)
             {
                 recv=recv+1;
                             ESP_LOGI(TAG, "Received status confirmation from light, status: %d", param->status_cb.onoff_status.present_onoff-10);  
@@ -415,7 +415,8 @@ static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_ev
 
             }
             else if (param->status_cb.onoff_status.present_onoff == 20 || param->status_cb.onoff_status.present_onoff == 21)
-            {
+             {
+           
                 recv=recv+1;
             ESP_LOGI(TAG, "Received status confirmation from relay, status: %d", param->status_cb.onoff_status.present_onoff-20);
             c1=1;
@@ -428,7 +429,7 @@ static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_ev
 //     vTaskDelay(pdMS_TO_TICKS(350));
 //     board_led_operation(LED_G, LED_OFF);
 //     store.onoff1=param->status_cb.onoff_status.present_onoff-30;
-//ESP_LOGI(TAG,"Relay is enabled, relaying the message.....");
+// ESP_LOGI(TAG,"Relay is enabled, relaying the message.....");
 // example_ble_mesh_send_gen_onoff_set1();
 // c=c+1;
 // }
@@ -464,7 +465,7 @@ static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_ev
 
 // }
                 
-//             }
+//              }
 }
         break;
     case ESP_BLE_MESH_GENERIC_CLIENT_TIMEOUT_EVT:

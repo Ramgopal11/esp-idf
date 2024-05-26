@@ -35,7 +35,7 @@
 #define CID_ESP 0x02E5
  int64_t time_sync;
  int64_t state_change_time;
- bool sync=true;
+ int c=0;
 extern struct _led_state led_state[3];
 
 static uint8_t dev_uuid[16] = { 0xdd, 0xdd };
@@ -171,39 +171,39 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
             int flag = 0;
             if (ctx->recv_dst == 0xC001)
         {
-            // if(sync)
-            // {
-            // time_sync=esp_timer_get_time();
-            // sync=!sync;
-            // }
-            // else{
-                //state_change_time=esp_timer_get_time();
-            // led = &led_state[model->element->element_addr - primary_addr];
-            // board_led_operation(led->pin, onoff);
-            // flag=1;
-            // }
-        }
-        else if(ctx->recv_dst == 0xC002)
-        {
-            ctx->addr=0xC002;
-            esp_ble_mesh_gen_onoff_srv_t *srv = (esp_ble_mesh_gen_onoff_srv_t *)model->user_data;
-srv->state.onoff+=40;
-            esp_ble_mesh_server_model_send_msg(model, ctx,
-                ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
-                srv->state.onoff-=40;
-        }
-        else {
-            if(sync)
+            if(c<3)
             {
             time_sync=esp_timer_get_time();
-            sync=!sync;
+            c+=1;
             }
             else{
+                state_change_time=esp_timer_get_time();
             led = &led_state[model->element->element_addr - primary_addr];
             board_led_operation(led->pin, onoff);
             flag=1;
-            state_change_time=esp_timer_get_time();
+            }
         }
+        else if(ctx->recv_dst == 0xC002)
+        {
+//             ctx->addr=0xC002;
+//             esp_ble_mesh_gen_onoff_srv_t *srv = (esp_ble_mesh_gen_onoff_srv_t *)model->user_data;
+// srv->state.onoff+=40;
+//             esp_ble_mesh_server_model_send_msg(model, ctx,
+//                 ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
+//                 srv->state.onoff-=40;
+        }
+        else {
+            // if(c<3)
+            // {
+            // time_sync=esp_timer_get_time();
+            // c+=1;
+            // }
+            // else{
+            // led = &led_state[model->element->element_addr - primary_addr];
+            // board_led_operation(led->pin, onoff);
+            // flag=1;
+            // state_change_time=esp_timer_get_time();
+        //}
         }
         if(flag == 1)
         {
@@ -307,7 +307,8 @@ ESP_LOGI(TAG,"%lld ", diff);
                 ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
     }
     else if(type == 2)
-{  srv->state.onoff=srv->state.onoff+20;
+{   ctx->addr=0xC002;
+    srv->state.onoff=srv->state.onoff+20;
     esp_ble_mesh_server_model_send_msg(model, ctx,
                 ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
 }
