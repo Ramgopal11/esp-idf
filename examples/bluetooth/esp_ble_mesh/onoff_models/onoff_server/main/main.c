@@ -52,7 +52,7 @@ static void status_confirmation_callback(TimerHandle_t xTimer);
 static esp_ble_mesh_cfg_srv_t config_server = {
     /* 3 transmissions with 20ms interval */
     .net_transmit = ESP_BLE_MESH_TRANSMIT(2, 20),
-    .relay = ESP_BLE_MESH_RELAY_DISABLED,
+    .relay = ESP_BLE_MESH_RELAY_ENABLED,
     .relay_retransmit = ESP_BLE_MESH_TRANSMIT(2, 20),
     .beacon = ESP_BLE_MESH_BEACON_ENABLED,
 #if defined(CONFIG_BLE_MESH_GATT_PROXY_SERVER)
@@ -169,42 +169,20 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
         if(esp_ble_mesh_is_model_subscribed_to_group(model, ctx->recv_dst))
         {
             int flag = 0;
-            if (ctx->recv_dst == 0xC001)
+            if (ctx->recv_dst == 0xC000)
         {
-            if(c<3)
+              if(c<3)
             {
             time_sync=esp_timer_get_time();
             c+=1;
             }
-            else{
-                state_change_time=esp_timer_get_time();
+            ESP_LOGI(TAG,"Relay is enabled, relaying the message.....");
             led = &led_state[model->element->element_addr - primary_addr];
             board_led_operation(led->pin, onoff);
-            flag=1;
-            }
+             flag=1;
+            state_change_time=esp_timer_get_time();
         }
-        else if(ctx->recv_dst == 0xC002)
-        {
-//             ctx->addr=0xC002;
-//             esp_ble_mesh_gen_onoff_srv_t *srv = (esp_ble_mesh_gen_onoff_srv_t *)model->user_data;
-// srv->state.onoff+=40;
-//             esp_ble_mesh_server_model_send_msg(model, ctx,
-//                 ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
-//                 srv->state.onoff-=40;
-        }
-        else {
-            // if(c<3)
-            // {
-            // time_sync=esp_timer_get_time();
-            // c+=1;
-            // }
-            // else{
-            // led = &led_state[model->element->element_addr - primary_addr];
-            // board_led_operation(led->pin, onoff);
-            // flag=1;
-            // state_change_time=esp_timer_get_time();
-        //}
-        }
+       
         if(flag == 1)
         {
         int random_delay_ms = esp_random() % 30001;
@@ -216,21 +194,7 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
             memcpy(timer_args->srv, (esp_ble_mesh_gen_onoff_srv_t *)model->user_data, sizeof(esp_ble_mesh_gen_onoff_srv_t));
             timer_args->ctx=(esp_ble_mesh_msg_ctx_t *)malloc(sizeof(esp_ble_mesh_msg_ctx_t));
             memcpy(timer_args->ctx, ctx, sizeof(esp_ble_mesh_msg_ctx_t));
-
-            if(ctx->recv_dst == 0xC000)
-            {
                 timer_args->type=1;
-                ctx->addr=0xC002;
-            esp_ble_mesh_gen_onoff_srv_t *srv = (esp_ble_mesh_gen_onoff_srv_t *)model->user_data;
-            srv->state.onoff+=30;
-            esp_ble_mesh_server_model_send_msg(model, ctx,
-                ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
-                srv->state.onoff-=30;
-            }
-            else if(ctx->recv_dst == 0xC001)
-            {
-                timer_args->type=2;
-            }
         if (random_delay_timer != NULL) {
             xTimerStop(random_delay_timer, portMAX_DELAY);
         }
@@ -248,7 +212,6 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
     }
 }
 }
-
 static void example_handle_gen_onoff_msg(esp_ble_mesh_model_t *model,
                                          esp_ble_mesh_msg_ctx_t *ctx,
                                          esp_ble_mesh_server_recv_gen_onoff_set_t *set)
@@ -288,7 +251,7 @@ static void status_confirmation_callback(TimerHandle_t xTimer)
         int type = timer_args->type;
     esp_ble_mesh_model_publish(model, ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS,
             sizeof(srv->state.onoff), &srv->state.onoff, ROLE_NODE);
-            int64_t diff=state_change_time-time_sync;
+            int64_t diff=state_change_time-time_sync+350000;
             uint8_t data[8];
 data[0] = (uint8_t)(diff & 0xFF);
 data[1] = (uint8_t)((diff >> 8) & 0xFF);

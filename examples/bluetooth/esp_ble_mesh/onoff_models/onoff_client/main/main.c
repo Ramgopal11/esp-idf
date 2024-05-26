@@ -225,7 +225,7 @@ for(int i=0;i<len;i++)
         }
                  ESP_LOGI(TAG, "Time array: %lld",time_arr[i]);
 }
-int64_t consistent_time=max-min;
+int64_t consistent_time=max-min+350000;
     int64_t execution_time=max-(status_cont_time-sync_time);
     ESP_LOGI(TAG, "Consistent time is : %lld",consistent_time);
     ESP_LOGI(TAG, "Execution time is : %lld",execution_time);
@@ -331,20 +331,20 @@ void start_experiment()
 {
     if(first)
     {
-        store.onoff2=LED_ON;
+        //store.onoff2=LED_ON;
               sync_time=esp_timer_get_time();
         example_ble_mesh_send_gen_onoff_set();
-        vTaskDelay(pdMS_TO_TICKS(355));
-      example_ble_mesh_send_gen_onoff_set1(); 
+    //     vTaskDelay(pdMS_TO_TICKS(355));
+    //   example_ble_mesh_send_gen_onoff_set1(); 
       store.onoff=LED_ON;
       first=false;
     }
-        example_ble_mesh_send_gen_onoff_set2();
-        vTaskDelay(pdMS_TO_TICKS(1000));
+        // example_ble_mesh_send_gen_onoff_set2();
+        // vTaskDelay(pdMS_TO_TICKS(1000));
             status_cont_time=esp_timer_get_time();
         example_ble_mesh_send_gen_onoff_set();
-        vTaskDelay(pdMS_TO_TICKS(1000));
-        example_ble_mesh_send_gen_onoff_set2();
+        // vTaskDelay(pdMS_TO_TICKS(1000));
+        // example_ble_mesh_send_gen_onoff_set2();
         sent=m;
 }
 void save_time()
@@ -377,9 +377,7 @@ void stop_experiment(void)
 static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_event_t event,
                                                esp_ble_mesh_generic_client_cb_param_t *param)
 {
-    ESP_LOGI(TAG, "Generic client, event %u, error code %d, opcode is 0x%04" PRIx32,
-        event, param->error_code, param->params->opcode);
-
+    
     switch (event) {
     case ESP_BLE_MESH_GENERIC_CLIENT_GET_STATE_EVT:
         ESP_LOGI(TAG, "ESP_BLE_MESH_GENERIC_CLIENT_GET_STATE_EVT");
@@ -394,7 +392,6 @@ static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_ev
         }
         break;
     case ESP_BLE_MESH_GENERIC_CLIENT_PUBLISH_EVT:
-        ESP_LOGI(TAG, "ESP_BLE_MESH_GENERIC_CLIENT_PUBLISH_EVT");
         if (param->params->opcode == ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS) {
             //take the time and store it in time_arr, then increment pt by 1 then check if pt=2 reset pt
             if(c1!=0)
