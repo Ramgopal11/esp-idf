@@ -261,7 +261,7 @@ static void status_confirmation_callback(TimerHandle_t xTimer)
         int type = timer_args->type;
     esp_ble_mesh_model_publish(model, ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS,
             sizeof(srv->state.onoff), &srv->state.onoff, ROLE_NODE);
-            int64_t diff=state_change_time-time_sync+350000;
+            int64_t diff=state_change_time-time_sync+350000+150000;
             uint8_t data[8];
 data[0] = (uint8_t)(diff & 0xFF);
 data[1] = (uint8_t)((diff >> 8) & 0xFF);
