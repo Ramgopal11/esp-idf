@@ -75,7 +75,7 @@ static esp_ble_mesh_client_t onoff_client;
 static esp_ble_mesh_cfg_srv_t config_server = {
     /* 3 transmissions with 20ms interval */
     .net_transmit = ESP_BLE_MESH_TRANSMIT(2, 20),
-    .relay = ESP_BLE_MESH_RELAY_DISABLED,
+    .relay = ESP_BLE_MESH_RELAY_ENABLED,
     .relay_retransmit = ESP_BLE_MESH_TRANSMIT(2, 20),
     .beacon = ESP_BLE_MESH_BEACON_ENABLED,
 #if defined(CONFIG_BLE_MESH_GATT_PROXY_SERVER)
@@ -211,7 +211,7 @@ void pdr_callback()
     pdr=(recv/sent)*100;
     ESP_LOGI(TAG, "Current PDR is : %f percent",pdr);
     recv=0;
-    int64_t tmp=status_cont_time-sync_time;
+    int64_t tmp=status_cont_time-sync_time+350000;
     ESP_LOGI(TAG, "%lld",tmp);
 }
 void example_ble_mesh_send_gen_onoff_set(void)
@@ -246,7 +246,7 @@ void example_ble_mesh_send_gen_onoff_set(void)
             xTimerStop(delay_timer, portMAX_DELAY);
         }
 
-            delay_timer = xTimerCreate("RandomDelayTimer", pdMS_TO_TICKS(33001), pdFALSE, NULL, pdr_callback);
+            delay_timer = xTimerCreate("RandomDelayTimer", pdMS_TO_TICKS(3001), pdFALSE, NULL, pdr_callback);
         if (delay_timer != NULL) {
             xTimerStart(delay_timer, portMAX_DELAY);
         }

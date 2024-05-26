@@ -177,7 +177,7 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
             time_sync=esp_timer_get_time();
             c+=1;
             }
-            else if (c1 == 0)
+            else if (c1 == 1)
             {
             ESP_LOGI(TAG,"Relay is enabled, relaying the message.....");
             led = &led_state[model->element->element_addr - primary_addr];
@@ -192,7 +192,7 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
        
         if(c1 == 3)
         {
-            flag=0;
+            c1=0;
         int random_delay_ms = esp_random() % 30001;
         TimerArgs *timer_args = (TimerArgs *)malloc(sizeof(TimerArgs));
         if (timer_args != NULL) {
@@ -214,11 +214,13 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
                 flag=0;
                 }
         }
-    } else if (ctx->recv_dst == 0xFFFF) {
+    } 
+    }
+    else if (ctx->recv_dst == 0xFFFF) {
         led = &led_state[model->element->element_addr - primary_addr];
         board_led_operation(led->pin, onoff);
     }
-}
+
 }
 static void example_handle_gen_onoff_msg(esp_ble_mesh_model_t *model,
                                          esp_ble_mesh_msg_ctx_t *ctx,
