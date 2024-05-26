@@ -226,7 +226,7 @@ for(int i=0;i<len;i++)
                  ESP_LOGI(TAG, "Time array: %lld",time_arr[i]);
 }
 int64_t consistent_time=max-min;
-    int64_t execution_time=max-(status_cont_time-sync_time);
+    int64_t execution_time=max-(status_cont_time-sync_time-100000);
     ESP_LOGI(TAG, "Consistent time is : %lld",consistent_time);
     ESP_LOGI(TAG, "Execution time is : %lld",execution_time);
 }
