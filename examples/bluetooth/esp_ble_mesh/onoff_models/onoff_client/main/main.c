@@ -211,24 +211,8 @@ void pdr_callback()
     pdr=(recv/sent)*100;
     ESP_LOGI(TAG, "Current PDR is : %f percent",pdr);
     recv=0;
-int64_t min=time_arr[0];
-int64_t max=time_arr[0];
-for(int i=0;i<len;i++)
-{
-        if(time_arr[i]<min)
-        {
-            min=time_arr[i];
-        }
-        if(time_arr[i]>max)
-        {
-            max=time_arr[i];
-        }
-                 ESP_LOGI(TAG, "Time array: %lld",time_arr[i]);
-}
-int64_t consistent_time=max-min+350000;
-    int64_t execution_time=max-(status_cont_time-sync_time);
-    ESP_LOGI(TAG, "Consistent time is : %lld",consistent_time);
-    ESP_LOGI(TAG, "Execution time is : %lld",execution_time);
+    int64_t tmp=status_cont_time-sync_time;
+    ESP_LOGI(TAG, "%lld",tmp);
 }
 void example_ble_mesh_send_gen_onoff_set(void)
 {
@@ -394,29 +378,26 @@ static void example_ble_mesh_generic_client_cb(esp_ble_mesh_generic_client_cb_ev
     case ESP_BLE_MESH_GENERIC_CLIENT_PUBLISH_EVT:
         if (param->params->opcode == ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS) {
             //take the time and store it in time_arr, then increment pt by 1 then check if pt=2 reset pt
-            if(c1!=0)
-            {
-                data[c1-1]=param->status_cb.onoff_status.present_onoff;
-                c1+=1;
-                if(c1==9)
-                {
-                    c1=0;
-                    save_time();
-                }
-            }
-            else  if (param->status_cb.onoff_status.present_onoff == 10 || param->status_cb.onoff_status.present_onoff == 11)
+            // if(c1!=0)
+            // {
+            //     data[c1-1]=param->status_cb.onoff_status.present_onoff;
+            //     c1+=1;
+            //     if(c1==9)
+            //     {
+            //         c1=0;
+            //         save_time();
+            //     }
+            // }
+              if (param->status_cb.onoff_status.present_onoff == 10 || param->status_cb.onoff_status.present_onoff == 11)
             {
                 recv=recv+1;
-                            ESP_LOGI(TAG, "Received status confirmation from light, status: %d", param->status_cb.onoff_status.present_onoff-10);  
-                            c1=1;
-
+                            ESP_LOGI(TAG, "Received status confirmation from light, status: %d", param->status_cb.onoff_status.present_onoff-10);                 
             }
             else if (param->status_cb.onoff_status.present_onoff == 20 || param->status_cb.onoff_status.present_onoff == 21)
              {
            
                 recv=recv+1;
             ESP_LOGI(TAG, "Received status confirmation from relay, status: %d", param->status_cb.onoff_status.present_onoff-20);
-            c1=1;
             }
 //             else if(param->status_cb.onoff_status.present_onoff == 30 || param->status_cb.onoff_status.present_onoff == 31)
 //             {

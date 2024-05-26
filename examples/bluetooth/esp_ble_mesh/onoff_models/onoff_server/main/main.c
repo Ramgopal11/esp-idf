@@ -36,6 +36,7 @@
  int64_t time_sync;
  int64_t state_change_time;
  int c=0;
+ int c1=0;
 extern struct _led_state led_state[3];
 
 static uint8_t dev_uuid[16] = { 0xdd, 0xdd };
@@ -176,15 +177,22 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
             time_sync=esp_timer_get_time();
             c+=1;
             }
+            else if (c1 == 0)
+            {
             ESP_LOGI(TAG,"Relay is enabled, relaying the message.....");
             led = &led_state[model->element->element_addr - primary_addr];
             board_led_operation(led->pin, onoff);
-             flag=1;
+             c1+=1;
             state_change_time=esp_timer_get_time();
+            }
+            else{
+                c1+=1;
+            }
         }
        
-        if(flag == 1)
+        if(c1 == 3)
         {
+            flag=0;
         int random_delay_ms = esp_random() % 30001;
         TimerArgs *timer_args = (TimerArgs *)malloc(sizeof(TimerArgs));
         if (timer_args != NULL) {
@@ -199,7 +207,7 @@ static void example_change_led_state(esp_ble_mesh_model_t *model,
             xTimerStop(random_delay_timer, portMAX_DELAY);
         }
 
-            random_delay_timer = xTimerCreate("RandomDelayTimer", pdMS_TO_TICKS(random_delay_ms), pdFALSE, (void *)timer_args, status_confirmation_callback);
+            random_delay_timer = xTimerCreate("RandomDelayTimer", pdMS_TO_TICKS(10), pdFALSE, (void *)timer_args, status_confirmation_callback);
         if (random_delay_timer != NULL) {
             xTimerStart(random_delay_timer, portMAX_DELAY);
         }
@@ -275,11 +283,11 @@ ESP_LOGI(TAG,"%lld ", diff);
     esp_ble_mesh_server_model_send_msg(model, ctx,
                 ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(srv->state.onoff), &srv->state.onoff);
 }
-    for(int i=0;i<8;i++)
-    {
-        esp_ble_mesh_server_model_send_msg(model, ctx,
-                ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(data[i]), &data[i]);
-    }
+    // for(int i=0;i<8;i++)
+    // {
+    //     esp_ble_mesh_server_model_send_msg(model, ctx,
+    //             ESP_BLE_MESH_MODEL_OP_GEN_ONOFF_STATUS, sizeof(data[i]), &data[i]);
+    // }
         free(timer_args);
 }
 
